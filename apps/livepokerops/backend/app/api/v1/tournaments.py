@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
@@ -90,3 +91,55 @@ async def get_tournament_events(
     return await service.get_events(
         tournament_id=tournament_id, limit=limit, offset=offset
     )
+
+
+# ─── Archive / Search ───
+
+
+@router.get("/archive/search", response_model=dict)
+async def search_tournaments(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_player: Annotated[Player, Depends(get_current_player)],
+    q: str | None = Query(None, description="Search query"),
+    status: str | None = Query(None, description="Filter by status"),
+    date_from: datetime | None = Query(None, description="Start date filter (ISO)"),
+    date_to: datetime | None = Query(None, description="End date filter (ISO)"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Search tournaments with full-text query and date filters."""
+    service = TournamentService(db)
+    results, total = await service.search_tournaments(
+        query_str=q,
+        status_filter=status,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+        offset=offset,
+    )
+    return {
+        "total": total,
+        "results": [TournamentResponse.model_validate(t) for t in results],
+    }
+
+
+@router.get("/archive/upcoming", response_model=list[TournamentSummary])
+async def upcoming_tournaments(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_player: Annotated[Player, Depends(get_current_player)],
+    days: int = Query(7, ge=1, le=90),
+):
+    """Get upcoming tournaments within the next N days."""
+    service = TournamentService(db)
+    return await service.get_upcoming(days=days)
+
+
+@router.get("/archive/completed", response_model=list[TournamentSummary])
+async def recent_completed(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_player: Annotated[Player, Depends(get_current_player)],
+    limit: int = Query(20, ge=1, le=100),
+):
+    """Get recently completed tournaments."""
+    service = TournamentService(db)
+    return await service.get_recent_completed(limit=limit)

@@ -14,7 +14,7 @@ from app.models.broadcast import MessageTemplate
 setup_logging()
 
 # Use SQLite in-memory for tests
-TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+TEST_DATABASE_URL = "sqlite+aiosqlite://"
 
 test_engine = create_async_engine(
     TEST_DATABASE_URL, echo=False, connect_args={"check_same_thread": False}
@@ -38,10 +38,6 @@ def event_loop():
 async def setup_database():
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    # Enable WAL mode for concurrent test access
-    async with test_engine.connect() as conn:
-        await conn.exec_driver_sql("PRAGMA journal_mode=WAL")
-        await conn.exec_driver_sql("PRAGMA busy_timeout=5000")
     yield
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

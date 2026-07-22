@@ -23,7 +23,7 @@ export default function LoginPage() {
       })
       localStorage.setItem('access_token', res.access_token)
       localStorage.setItem('refresh_token', res.refresh_token)
-      router.push('/broadcast')
+      router.push('/admin')
     } catch (err: any) {
       setError(err.message || 'Login failed')
     } finally {
