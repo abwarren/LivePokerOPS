@@ -15,14 +15,14 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ./apps/livepokerops/backend
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./apps/livepokerops/backend:/app
     depends_on:
       db:
         condition: service_healthy
@@ -31,13 +31,13 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./apps/livepokerops/frontend
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
-      - ./frontend:/app
+      - ./apps/livepokerops/frontend:/app
       - /app/node_modules
       - /app/.next
     depends_on:

@@ -1,7 +1,7 @@
 .PHONY: help build up down restart logs test lint format shell-backend shell-db migrate makemigrations
 
 help:
-	@echo "ConceptPokerPlatform — Makefile"
+	@echo "LivePokerOPS — Makefile"
 	@echo ""
 	@echo "  make build         — Build all Docker images"
 	@echo "  make up            — Start all services (detached)"
