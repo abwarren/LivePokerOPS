@@ -1,0 +1,7 @@
+services:
+  backend:
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
