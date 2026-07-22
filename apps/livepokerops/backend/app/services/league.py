@@ -335,7 +335,7 @@ class LeagueService:
                     pp.player_id,
                     p.first_name || ' ' || p.last_name AS player_name,
                     p.nickname,
-                    SUM(pp.points_earned)::integer AS total_points,
+                    CAST(SUM(pp.points_earned) AS INTEGER) AS total_points,
                     COUNT(DISTINCT pp.tournament_id) AS tournaments_played,
                     COUNT(DISTINCT CASE WHEN pp.is_attendance THEN pp.tournament_id END) AS attendance_count,
                     COUNT(DISTINCT CASE WHEN pp.points_type = 'finishing_position' AND pp.position IS NOT NULL AND pp.position <= 9 THEN pp.tournament_id END) AS final_table_count,

@@ -30,7 +30,13 @@ class TestAttendanceAPI:
             },
         )
         assert resp.status_code == 201
-        return resp.json()["player_id"]
+        token = resp.json()["access_token"]
+        me_resp = await client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert me_resp.status_code == 200
+        return me_resp.json()["id"]
 
     # ─── Check-in ───
 
