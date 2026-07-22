@@ -1,10 +1,7 @@
-from __future__ import annotations
-
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -13,9 +10,7 @@ from app.core.database import Base
 class Player(Base):
     __tablename__ = "players"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     nickname: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
@@ -40,11 +35,9 @@ class Player(Base):
 class Auth(Base):
     __tablename__ = "auth"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     player_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), unique=True, nullable=False
+        Uuid, ForeignKey("players.id", ondelete="CASCADE"), unique=True, nullable=False
     )
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     refresh_token_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)

@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 import asyncio
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -9,7 +7,10 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.database import Base, get_db
+from app.core.logging import setup_logging
 from app.main import app
+
+setup_logging()
 
 # Use SQLite in-memory for tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"

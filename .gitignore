@@ -36,6 +36,7 @@ dist/
 htmlcov/
 .pytest_cache/
 test-results/
+*.db
 
 # Logs
 *.log
