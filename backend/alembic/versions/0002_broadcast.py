@@ -4,11 +4,13 @@ Revision ID: 0002
 Revises: 0001
 Create Date: 2026-07-22
 """
+
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+
+from alembic import op
 
 revision: str = "0002"
 down_revision: Union[str, None] = "0001"
@@ -20,12 +22,18 @@ def upgrade() -> None:
     # Template categories matching Gareth's real workflow
     op.create_table(
         "message_templates",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        ),
         sa.Column("name", sa.String(100), nullable=False, unique=True),
         sa.Column("description", sa.Text, nullable=True),
-        sa.Column("category", sa.String(50), nullable=False),  # announcement, game_on, final_table, results, reminder
+        sa.Column(
+            "category", sa.String(50), nullable=False
+        ),  # announcement, game_on, final_table, results, reminder
         sa.Column("body_template", sa.Text, nullable=False),  # template with {variables}
-        sa.Column("variables", JSONB, nullable=False, server_default=sa.text("'[]'::jsonb")),  # ["date", "time", "player_count", ...]
+        sa.Column(
+            "variables", JSONB, nullable=False, server_default=sa.text("'[]'::jsonb")
+        ),  # ["date", "time", "player_count", ...]
         sa.Column("is_builtin", sa.Boolean, nullable=False, server_default=sa.text("false")),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
@@ -35,7 +43,9 @@ def upgrade() -> None:
     # Each broadcast send
     op.create_table(
         "broadcasts",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        ),
         sa.Column("template_id", UUID(as_uuid=True), nullable=True),
         sa.Column("subject", sa.String(200), nullable=False),
         sa.Column("rendered_body", sa.Text, nullable=False),
@@ -50,8 +60,12 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()")),
     )
     op.create_foreign_key(
-        "fk_broadcast_template", "broadcasts", "message_templates",
-        ["template_id"], ["id"], ondelete="SET NULL",
+        "fk_broadcast_template",
+        "broadcasts",
+        "message_templates",
+        ["template_id"],
+        ["id"],
+        ondelete="SET NULL",
     )
     op.create_index("ix_broadcasts_status", "broadcasts", ["status"])
     op.create_index("ix_broadcasts_scheduled", "broadcasts", ["scheduled_for"])
@@ -59,7 +73,9 @@ def upgrade() -> None:
     # Per-player delivery receipts
     op.create_table(
         "broadcast_recipients",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        ),
         sa.Column("broadcast_id", UUID(as_uuid=True), nullable=False),
         sa.Column("player_id", UUID(as_uuid=True), nullable=False),
         sa.Column("channel", sa.String(20), nullable=False, server_default=sa.text("'whatsapp'")),
@@ -70,12 +86,20 @@ def upgrade() -> None:
         sa.Column("error_message", sa.Text, nullable=True),
     )
     op.create_foreign_key(
-        "fk_recipient_broadcast", "broadcast_recipients", "broadcasts",
-        ["broadcast_id"], ["id"], ondelete="CASCADE",
+        "fk_recipient_broadcast",
+        "broadcast_recipients",
+        "broadcasts",
+        ["broadcast_id"],
+        ["id"],
+        ondelete="CASCADE",
     )
     op.create_foreign_key(
-        "fk_recipient_player", "broadcast_recipients", "players",
-        ["player_id"], ["id"], ondelete="CASCADE",
+        "fk_recipient_player",
+        "broadcast_recipients",
+        "players",
+        ["player_id"],
+        ["id"],
+        ondelete="CASCADE",
     )
     op.create_index("ix_recipients_broadcast", "broadcast_recipients", ["broadcast_id"])
     op.create_index("ix_recipients_player", "broadcast_recipients", ["player_id"])

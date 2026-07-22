@@ -1,4 +1,3 @@
-import pytest
 from app.services.template_engine import TemplateEngine
 
 
@@ -41,12 +40,15 @@ class TestTemplateEngine:
             "FREEROLL TODAY AT {time}! {table_count} TABLES!\n"
             "{confirmed_count} players confirmed:\n{player_list}"
         )
-        result = TemplateEngine.preview(template, {
-            "time": "7PM",
-            "table_count": 3,
-            "confirmed_count": 17,
-            "player_list": ["Alice", "Bob", "Charlie"],
-        })
+        result = TemplateEngine.preview(
+            template,
+            {
+                "time": "7PM",
+                "table_count": 3,
+                "confirmed_count": 17,
+                "player_list": ["Alice", "Bob", "Charlie"],
+            },
+        )
         assert "FREEROLL TODAY AT 7PM!" in result
         assert "3 TABLES!" in result
         assert "17 players confirmed:" in result

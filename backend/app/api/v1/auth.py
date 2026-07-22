@@ -1,4 +1,3 @@
-
 import uuid
 from datetime import datetime, timezone
 from typing import Annotated
@@ -19,7 +18,6 @@ from app.core.security import (
 from app.models import Auth, Player
 from app.schemas.auth import (
     LoginRequest,
-    MessageResponse,
     PlayerMeResponse,
     RegisterRequest,
     TokenRefreshRequest,
@@ -142,9 +140,7 @@ async def refresh_token(
             detail="Invalid refresh token",
         )
 
-    result = await db.execute(
-        select(Player).where(Player.id == uuid.UUID(player_id))
-    )
+    result = await db.execute(select(Player).where(Player.id == uuid.UUID(player_id)))
     player = result.scalar_one_or_none()
 
     if player is None or not player.is_active:

@@ -1,15 +1,14 @@
-
 import csv
 import io
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_player, require_admin
+from app.api.deps import require_admin
 from app.core.database import get_db
 from app.models import Player
 
@@ -41,7 +40,7 @@ async def import_players_csv(
     _: Player = Depends(require_admin),
     file: UploadFile = File(...),
 ):
-    """Import players from a CSV file. Expected columns: first_name, last_name, phone, email (optional), nickname (optional)."""
+    """Import players from a CSV file. Expected columns: first_name, last_name, phone, email (optional), nickname (optional)."""  # noqa: E501
     if not file.filename or not file.filename.endswith(".csv"):
         raise HTTPException(status_code=400, detail="Only .csv files accepted")
 
@@ -68,7 +67,7 @@ async def import_players_csv(
     if missing:
         raise HTTPException(
             status_code=400,
-            detail=f"Missing required columns: {', '.join(sorted(missing))}. Found: {', '.join(sorted(headers))}"
+            detail=f"Missing required columns: {', '.join(sorted(missing))}. Found: {', '.join(sorted(headers))}",  # noqa: E501
         )
 
     imported = 0
@@ -122,10 +121,10 @@ async def list_players(
     if search:
         like = f"%{search}%"
         query = query.where(
-            Player.first_name.ilike(like) |
-            Player.last_name.ilike(like) |
-            Player.email.ilike(like) |
-            Player.phone.ilike(like)
+            Player.first_name.ilike(like)
+            | Player.last_name.ilike(like)
+            | Player.email.ilike(like)
+            | Player.phone.ilike(like)
         )
     result = await db.execute(query)
     return list(result.scalars().all())
@@ -138,5 +137,6 @@ async def player_count(
 ):
     """Get total player count."""
     from sqlalchemy import func
+
     result = await db.execute(select(func.count(Player.id)))
     return {"total": result.scalar() or 0}

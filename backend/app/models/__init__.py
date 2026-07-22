@@ -1,4 +1,4 @@
-from app.models.player import Player, Auth
-from app.models.broadcast import MessageTemplate, Broadcast, BroadcastRecipient
+from app.models.broadcast import Broadcast, BroadcastRecipient, MessageTemplate
+from app.models.player import Auth, Player
 
 __all__ = ["Player", "Auth", "MessageTemplate", "Broadcast", "BroadcastRecipient"]

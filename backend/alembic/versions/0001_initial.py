@@ -4,11 +4,13 @@ Revision ID: 0001
 Revises:
 Create Date: 2026-07-22
 """
+
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
+
+from alembic import op
 
 revision: str = "0001"
 down_revision: Union[str, None] = None
@@ -19,7 +21,9 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     op.create_table(
         "players",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        ),
         sa.Column("first_name", sa.String(100), nullable=False),
         sa.Column("last_name", sa.String(100), nullable=False),
         sa.Column("nickname", sa.String(100), nullable=True, unique=True),
@@ -36,7 +40,9 @@ def upgrade() -> None:
 
     op.create_table(
         "auth",
-        sa.Column("id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
+        sa.Column(
+            "id", UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")
+        ),
         sa.Column("player_id", UUID(as_uuid=True), nullable=False, unique=True),
         sa.Column("password_hash", sa.String(255), nullable=False),
         sa.Column("refresh_token_hash", sa.String(255), nullable=True),
@@ -47,8 +53,10 @@ def upgrade() -> None:
     )
     op.create_foreign_key(
         "fk_auth_player_id",
-        "auth", "players",
-        ["player_id"], ["id"],
+        "auth",
+        "players",
+        ["player_id"],
+        ["id"],
         ondelete="CASCADE",
     )
 

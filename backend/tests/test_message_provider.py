@@ -1,4 +1,5 @@
 import pytest
+
 from app.services.message_provider import ConsoleMessageProvider
 
 

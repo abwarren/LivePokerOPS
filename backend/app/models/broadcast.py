@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, JSON, String, Text, Uuid
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -57,7 +57,9 @@ class Broadcast(Base):
     )
 
     template = relationship("MessageTemplate", back_populates="broadcasts")
-    recipients = relationship("BroadcastRecipient", back_populates="broadcast", cascade="all, delete-orphan")
+    recipients = relationship(
+        "BroadcastRecipient", back_populates="broadcast", cascade="all, delete-orphan"
+    )  # noqa: E501
 
 
 class BroadcastRecipient(Base):

@@ -14,7 +14,7 @@ class MessageProvider(ABC):
     @abstractmethod
     async def send_message(self, to: str, body: str, subject: str | None = None) -> dict[str, Any]:
         """Send a message to a single recipient.
-        
+
         Returns: dict with at minimum {"message_id": str, "status": "sent|failed"}
         """
         ...
@@ -24,7 +24,7 @@ class MessageProvider(ABC):
         self, recipients: list[dict[str, Any]], body: str, subject: str | None = None
     ) -> list[dict[str, Any]]:
         """Send a message to multiple recipients.
-        
+
         Each recipient dict has at minimum {"phone": str, "player_id": str}
         Returns list of per-recipient delivery results.
         """
@@ -33,7 +33,7 @@ class MessageProvider(ABC):
 
 class ConsoleMessageProvider(MessageProvider):
     """Dev/console provider — logs messages to console.
-    
+
     Use this during development before WhatsApp Cloud API is set up.
     """
 
@@ -52,14 +52,16 @@ class ConsoleMessageProvider(MessageProvider):
     ) -> list[dict[str, Any]]:
         results = []
         for r in recipients:
-            result = await self.send_message(r.get("phone", r.get("player_id", "unknown")), body, subject)
+            result = await self.send_message(
+                r.get("phone", r.get("player_id", "unknown")), body, subject
+            )  # noqa: E501
             results.append({**result, "player_id": r.get("player_id")})
         return results
 
 
 class WhatsAppCloudProvider(MessageProvider):
     """WhatsApp Cloud API provider.
-    
+
     Requires META_WHATSAPP_TOKEN and META_WHATSAPP_PHONE_NUMBER_ID env vars.
     """
 
@@ -93,8 +95,15 @@ class WhatsAppCloudProvider(MessageProvider):
             msg_id = data.get("messages", [{}])[0].get("id", "unknown")
             return {"message_id": msg_id, "status": "sent", "channel": "whatsapp"}
         else:
-            logger.error("whatsapp_send_failed", to=to, status=response.status_code, error=response.text)
-            return {"message_id": "", "status": "failed", "error": response.text, "channel": "whatsapp"}
+            logger.error(
+                "whatsapp_send_failed", to=to, status=response.status_code, error=response.text
+            )  # noqa: E501
+            return {
+                "message_id": "",
+                "status": "failed",
+                "error": response.text,
+                "channel": "whatsapp",
+            }  # noqa: E501
 
     async def send_bulk(
         self, recipients: list[dict[str, Any]], body: str, subject: str | None = None
@@ -103,7 +112,13 @@ class WhatsAppCloudProvider(MessageProvider):
         for r in recipients:
             phone = r.get("phone")
             if not phone:
-                results.append({"status": "failed", "error": "No phone number", "player_id": r.get("player_id")})
+                results.append(
+                    {
+                        "status": "failed",
+                        "error": "No phone number",
+                        "player_id": r.get("player_id"),
+                    }
+                )  # noqa: E501
                 continue
             result = await self.send_message(phone, body, subject)
             results.append({**result, "player_id": r.get("player_id")})
@@ -112,18 +127,18 @@ class WhatsAppCloudProvider(MessageProvider):
 
 def get_message_provider() -> MessageProvider:
     """Factory: returns the configured message provider.
-    
+
     Falls back to ConsoleMessageProvider if WhatsApp Cloud API is not configured.
     """
     from app.core.config import get_settings
 
     settings = get_settings()
-    
+
     whatsapp_token = getattr(settings, "whatsapp_api_key", None) or ""
     whatsapp_phone = getattr(settings, "whatsapp_phone_number_id", None) or ""
 
     if whatsapp_token and whatsapp_phone:
         return WhatsAppCloudProvider(whatsapp_token, whatsapp_phone)
-    
+
     logger.info("using_console_provider — no WhatsApp credentials configured")
     return ConsoleMessageProvider()

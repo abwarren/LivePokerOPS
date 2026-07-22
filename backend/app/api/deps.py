@@ -1,4 +1,3 @@
-
 import uuid
 from typing import Annotated
 
@@ -28,9 +27,7 @@ async def get_current_player(
 
     token = credentials.credentials
     try:
-        payload = jwt.decode(
-            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
-        )
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
         player_id = payload.get("sub")
         if player_id is None:
             raise HTTPException(
@@ -43,9 +40,7 @@ async def get_current_player(
             detail="Invalid token",
         )
 
-    result = await db.execute(
-        select(Player).where(Player.id == uuid.UUID(player_id))
-    )
+    result = await db.execute(select(Player).where(Player.id == uuid.UUID(player_id)))
     player = result.scalar_one_or_none()
 
     if player is None:

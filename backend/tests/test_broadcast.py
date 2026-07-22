@@ -1,9 +1,7 @@
 import uuid
+
 import pytest
 from httpx import AsyncClient
-
-from app.models import Player
-from app.schemas.broadcast import TemplateResponse
 
 
 @pytest.mark.asyncio
@@ -84,7 +82,7 @@ class TestBroadcastAPI:
         token = reg_resp.json()["access_token"]
 
         # Preview with a known template ID by first listing templates
-        templates_resp = await client.get(
+        await client.get(
             "/api/v1/broadcast/templates",
             headers={"Authorization": f"Bearer {token}"},
         )

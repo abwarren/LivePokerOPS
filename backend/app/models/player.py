@@ -29,7 +29,9 @@ class Player(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    auth = relationship("Auth", back_populates="player", uselist=False, cascade="all, delete-orphan")
+    auth = relationship(
+        "Auth", back_populates="player", uselist=False, cascade="all, delete-orphan"
+    )  # noqa: E501
 
 
 class Auth(Base):
@@ -44,9 +46,7 @@ class Auth(Base):
     refresh_token_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    last_login_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

@@ -6,8 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ─── Templates ───
+
 
 class TemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
@@ -41,6 +41,7 @@ class TemplateResponse(BaseModel):
 
 # ─── Broadcast ───
 
+
 class BroadcastPreviewRequest(BaseModel):
     template_id: uuid.UUID
     variables: dict[str, Any]
@@ -56,6 +57,7 @@ class BroadcastSendRequest(BaseModel):
 
 class BroadcastManualRequest(BaseModel):
     """Send a one-off message without a template (override)."""
+
     subject: str = Field(min_length=1, max_length=200)
     body: str = Field(min_length=1)
     player_ids: list[uuid.UUID] | None = None

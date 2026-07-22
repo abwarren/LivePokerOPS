@@ -1,24 +1,22 @@
-
 import uuid
-from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_player, require_admin
+from app.api.deps import require_admin
 from app.core.database import get_db
-from app.models import Player, Broadcast, BroadcastRecipient
+from app.models import BroadcastRecipient, Player
 from app.schemas.broadcast import (
-    TemplateCreate,
-    TemplateUpdate,
-    TemplateResponse,
-    BroadcastPreviewRequest,
-    BroadcastSendRequest,
-    BroadcastManualRequest,
-    BroadcastResponse,
     BroadcastDetailResponse,
+    BroadcastManualRequest,
+    BroadcastPreviewRequest,
     BroadcastRecipientResponse,
+    BroadcastResponse,
+    BroadcastSendRequest,
+    TemplateCreate,
+    TemplateResponse,
+    TemplateUpdate,
 )
 from app.services.broadcast import BroadcastService
 
@@ -206,6 +204,7 @@ async def get_broadcast_detail(
 
     # Load recipients
     from sqlalchemy import select as sel
+
     result = await db.execute(
         sel(BroadcastRecipient).where(BroadcastRecipient.broadcast_id == broadcast_id)
     )
@@ -216,14 +215,16 @@ async def get_broadcast_detail(
     for r in recipients:
         player_result = await db.execute(sel(Player).where(Player.id == r.player_id))
         player = player_result.scalar_one_or_none()
-        recipient_responses.append(BroadcastRecipientResponse(
-            id=r.id,
-            player_id=r.player_id,
-            player_name=f"{player.first_name} {player.last_name}" if player else "Unknown",
-            channel=r.channel,
-            status=r.status,
-            delivered_at=r.delivered_at,
-        ))
+        recipient_responses.append(
+            BroadcastRecipientResponse(
+                id=r.id,
+                player_id=r.player_id,
+                player_name=f"{player.first_name} {player.last_name}" if player else "Unknown",
+                channel=r.channel,
+                status=r.status,
+                delivered_at=r.delivered_at,
+            )
+        )
 
     return BroadcastDetailResponse(
         id=broadcast.id,
@@ -252,6 +253,7 @@ async def broadcast_stats(
 
 
 # ─── Template Categories (for dropdown) ───
+
 
 @router.get("/categories")
 async def list_categories():

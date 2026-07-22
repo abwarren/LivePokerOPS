@@ -4,13 +4,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select, update, func
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import get_logger
-from app.models import MessageTemplate, Broadcast, BroadcastRecipient, Player
+from app.models import Broadcast, BroadcastRecipient, MessageTemplate, Player
+from app.services.message_provider import MessageProvider, get_message_provider
 from app.services.template_engine import TemplateEngine
-from app.services.message_provider import get_message_provider, MessageProvider
 
 logger = get_logger(__name__)
 
@@ -36,8 +36,12 @@ class BroadcastService:
         return list(result.scalars().all())
 
     async def create_template(
-        self, name: str, body_template: str, category: str,
-        description: str | None = None, variables: list[str] | None = None
+        self,
+        name: str,
+        body_template: str,
+        category: str,
+        description: str | None = None,
+        variables: list[str] | None = None,
     ) -> MessageTemplate:
         # Auto-extract variables if not provided
         if variables is None:
@@ -55,9 +59,7 @@ class BroadcastService:
         await self.db.flush()
         return tmpl
 
-    async def update_template(
-        self, template_id: uuid.UUID, **kwargs
-    ) -> MessageTemplate | None:
+    async def update_template(self, template_id: uuid.UUID, **kwargs) -> MessageTemplate | None:
         tmpl = await self.get_template(template_id)
         if tmpl is None:
             return None
@@ -109,14 +111,12 @@ class BroadcastService:
             result = await self.db.execute(
                 select(Player).where(
                     Player.id.in_(player_ids),
-                    Player.is_active == True,
+                    Player.is_active.is_(True),
                 )
             )
             target_players = list(result.scalars().all())
         else:
-            result = await self.db.execute(
-                select(Player).where(Player.is_active == True)
-            )
+            result = await self.db.execute(select(Player).where(Player.is_active.is_(True)))
             target_players = list(result.scalars().all())
 
         if not target_players:
@@ -171,14 +171,12 @@ class BroadcastService:
             result = await self.db.execute(
                 select(Player).where(
                     Player.id.in_(player_ids),
-                    Player.is_active == True,
+                    Player.is_active.is_(True),
                 )
             )
             target_players = list(result.scalars().all())
         else:
-            result = await self.db.execute(
-                select(Player).where(Player.is_active == True)
-            )
+            result = await self.db.execute(select(Player).where(Player.is_active.is_(True)))
             target_players = list(result.scalars().all())
 
         broadcast = Broadcast(
@@ -207,7 +205,11 @@ class BroadcastService:
     async def _dispatch(self, broadcast: Broadcast, players: list[Player]) -> None:
         """Actually send messages and update delivery status."""
         recipients_data = [
-            {"phone": p.phone or "", "player_id": str(p.id), "name": f"{p.first_name} {p.last_name}"}
+            {
+                "phone": p.phone or "",
+                "player_id": str(p.id),
+                "name": f"{p.first_name} {p.last_name}",
+            }  # noqa: E501
             for p in players
         ]
 
@@ -296,23 +298,22 @@ class BroadcastService:
         )
 
     async def get_broadcast(self, broadcast_id: uuid.UUID) -> Broadcast | None:
-        result = await self.db.execute(
-            select(Broadcast).where(Broadcast.id == broadcast_id)
-        )
+        result = await self.db.execute(select(Broadcast).where(Broadcast.id == broadcast_id))
         return result.scalar_one_or_none()
 
     async def list_broadcasts(
-        self, status: str | None = None, category: str | None = None,
-        limit: int = 20, offset: int = 0,
+        self,
+        status: str | None = None,
+        category: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
     ) -> list[Broadcast]:
         query = select(Broadcast).order_by(Broadcast.created_at.desc())
         if status:
             query = query.where(Broadcast.status == status)
         if category and category != "all":
             # Join templates to filter by category
-            query = query.join(MessageTemplate).where(
-                MessageTemplate.category == category
-            )
+            query = query.join(MessageTemplate).where(MessageTemplate.category == category)
         query = query.offset(offset).limit(limit)
         result = await self.db.execute(query)
         return list(result.scalars().all())
@@ -321,8 +322,7 @@ class BroadcastService:
         """Get aggregate broadcast stats."""
         total = await self.db.execute(select(func.count(Broadcast.id)))
         by_status = await self.db.execute(
-            select(Broadcast.status, func.count(Broadcast.id))
-            .group_by(Broadcast.status)
+            select(Broadcast.status, func.count(Broadcast.id)).group_by(Broadcast.status)
         )
         return {
             "total": total.scalar() or 0,
