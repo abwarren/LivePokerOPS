@@ -135,7 +135,9 @@ class TestBroadcastAPI:
         )
         assert resp.status_code == 404
 
-    async def test_delete_custom_template(self, client: AsyncClient, admin_token: str, seed_templates):
+    async def test_delete_custom_template(
+        self, client: AsyncClient, admin_token: str, seed_templates
+    ):
         # seed_templates[1] is is_builtin=False
         tmpl_id = seed_templates[1].id
         resp = await client.delete(
@@ -144,7 +146,9 @@ class TestBroadcastAPI:
         )
         assert resp.status_code == 204
 
-    async def test_delete_builtin_template_denied(self, client: AsyncClient, admin_token: str, seed_templates):
+    async def test_delete_builtin_template_denied(
+        self, client: AsyncClient, admin_token: str, seed_templates
+    ):
         # seed_templates[0] is is_builtin=True
         tmpl_id = seed_templates[0].id
         resp = await client.delete(
@@ -162,7 +166,10 @@ class TestBroadcastAPI:
             headers={"Authorization": f"Bearer {admin_token}"},
             json={
                 "template_id": str(tmpl_id),
-                "variables": {"time": "7PM", "date": "Friday", "player_count": 24, "player_list": ["Alice", "Bob"]},
+                "variables": {
+                    "time": "7PM", "date": "Friday", "player_count": 24,
+                    "player_list": ["Alice", "Bob"],
+                },
             },
         )
         assert resp.status_code == 200
@@ -192,7 +199,10 @@ class TestBroadcastAPI:
             json={
                 "template_id": str(tmpl_id),
                 "subject": "Test Send",
-                "variables": {"time": "7PM", "date": "Friday", "player_count": 24, "player_list": ["Alice"]},
+                "variables": {
+                    "time": "7PM", "date": "Friday", "player_count": 24,
+                    "player_list": ["Alice"],
+                },
             },
         )
         assert resp.status_code == 201
@@ -225,7 +235,10 @@ class TestBroadcastAPI:
             json={
                 "template_id": str(tmpl_id),
                 "subject": "History Test",
-                "variables": {"time": "8PM", "date": "Saturday", "player_count": 10, "player_list": ["Bob"]},
+                "variables": {
+                    "time": "8PM", "date": "Saturday", "player_count": 10,
+                    "player_list": ["Bob"],
+                },
             },
         )
 
@@ -245,7 +258,10 @@ class TestBroadcastAPI:
             json={
                 "template_id": str(tmpl_id),
                 "subject": "Detail Test",
-                "variables": {"time": "9PM", "date": "Sunday", "player_count": 5, "player_list": ["Charlie"]},
+                "variables": {
+                    "time": "9PM", "date": "Sunday", "player_count": 5,
+                    "player_list": ["Charlie"],
+                },
             },
         )
         broadcast_id = send_resp.json()["id"]
@@ -268,7 +284,10 @@ class TestBroadcastAPI:
             json={
                 "template_id": str(tmpl_id),
                 "subject": "Stats Test",
-                "variables": {"time": "10PM", "date": "Monday", "player_count": 8, "player_list": ["Dave"]},
+                "variables": {
+                    "time": "10PM", "date": "Monday", "player_count": 8,
+                    "player_list": ["Dave"],
+                },
             },
         )
 
@@ -283,7 +302,9 @@ class TestBroadcastAPI:
 
     # ─── Scheduled Send ───
 
-    async def test_send_scheduled_broadcast(self, client: AsyncClient, admin_token: str, seed_templates):
+    async def test_send_scheduled_broadcast(
+        self, client: AsyncClient, admin_token: str, seed_templates
+    ):
         tmpl_id = seed_templates[0].id
         from datetime import datetime, timedelta, timezone
 
@@ -294,7 +315,10 @@ class TestBroadcastAPI:
             json={
                 "template_id": str(tmpl_id),
                 "subject": "Scheduled Test",
-                "variables": {"time": "11PM", "date": "Tuesday", "player_count": 3, "player_list": ["Eve"]},
+                "variables": {
+                    "time": "11PM", "date": "Tuesday", "player_count": 3,
+                    "player_list": ["Eve"],
+                },
                 "scheduled_for": future,
             },
         )

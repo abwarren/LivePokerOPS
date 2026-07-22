@@ -9,13 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.database import Base, get_db
 from app.core.logging import setup_logging
 from app.main import app
+from app.models.broadcast import MessageTemplate
 
 setup_logging()
 
 # Use SQLite in-memory for tests
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
+test_engine = create_async_engine(
+    TEST_DATABASE_URL, echo=False, connect_args={"check_same_thread": False}
+)
 
 TestSessionLocal = async_sessionmaker(
     test_engine,
@@ -55,8 +58,6 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
 
-
-from app.models.broadcast import MessageTemplate
 
 app.dependency_overrides[get_db] = override_get_db
 

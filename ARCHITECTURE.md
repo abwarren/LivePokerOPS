@@ -1,6 +1,6 @@
-# LivePokerOPS — Architecture Document
+# ConceptPokerPlatform — Architecture Document
 
-> **Last update:** 2026-07-22 — Integrated ConceptPokerMTTpro (11 vertical slices)
+> **Last update:** 2026-07-22 — Monorepo restructure with v0.1-broadcast-complete
 
 ---
 
