@@ -6,29 +6,11 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 class TestBroadcastAPI:
-    async def _register_and_login(self, client: AsyncClient, is_admin: bool = True) -> str:
-        """Register a player, optionally make admin, return access token."""
-        email = f"admin-{uuid.uuid4().hex[:8]}@test.com"
-        resp = await client.post(
-            "/api/v1/auth/register",
-            json={
-                "first_name": "Admin",
-                "last_name": "User",
-                "email": email,
-                "password": "StrongP@ss1",
-            },
-        )
-        token = resp.json()["access_token"]
+    """Full pipeline test for the broadcast system."""
 
-        if is_admin:
-            # We need to make this user admin directly in the DB
-            # Since we're using an in-memory SQLite, we need to do this via API
-            # For now, we'll test without admin and expect 403
-            pass
+    # ─── Auth & Permissions ───
 
-        return token, email
-
-    async def test_list_categories_unauthenticated(self, client: AsyncClient):
+    async def test_categories_public(self, client: AsyncClient):
         """Categories endpoint should be public."""
         resp = await client.get("/api/v1/broadcast/categories")
         assert resp.status_code == 200
@@ -36,83 +18,286 @@ class TestBroadcastAPI:
         assert "categories" in data
         assert len(data["categories"]) > 0
 
-    async def test_list_templates_needs_auth(self, client: AsyncClient):
+    async def test_templates_requires_auth(self, client: AsyncClient):
+        """Templates endpoint should require authentication."""
         resp = await client.get("/api/v1/broadcast/templates")
         assert resp.status_code == 401
 
-    async def test_list_templates_with_auth(self, client: AsyncClient):
-        # Register and login
-        email = f"player-{uuid.uuid4().hex[:8]}@test.com"
-        await client.post(
-            "/api/v1/auth/register",
-            json={
-                "first_name": "Test",
-                "last_name": "Player",
-                "email": email,
-                "password": "StrongP@ss1",
-            },
-        )
-        login_resp = await client.post(
-            "/api/v1/auth/login",
-            json={"email": email, "password": "StrongP@ss1"},
-        )
-        token = login_resp.json()["access_token"]
-
-        # Regular player should get 403 (admin required)
+    async def test_templates_requires_admin(self, client: AsyncClient, player_token: str):
+        """Non-admin should get 403."""
         resp = await client.get(
             "/api/v1/broadcast/templates",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {player_token}"},
         )
-        # For now, expect 403 since this user isn't admin
         assert resp.status_code == 403
 
-    async def test_preview_endpoint(self, client: AsyncClient, db_session):
-        """Test preview without needing admin (mock the dependency)."""
-        # Register admin user
-        email = f"admin-{uuid.uuid4().hex[:8]}@test.com"
-        reg_resp = await client.post(
-            "/api/v1/auth/register",
-            json={
-                "first_name": "Admin",
-                "last_name": "User",
-                "email": email,
-                "password": "StrongP@ss1",
-            },
-        )
-        token = reg_resp.json()["access_token"]
+    async def test_broadcast_history_requires_auth(self, client: AsyncClient):
+        resp = await client.get("/api/v1/broadcast/history")
+        assert resp.status_code == 401
 
-        # Preview with a known template ID by first listing templates
-        await client.get(
+    async def test_broadcast_stats_requires_auth(self, client: AsyncClient):
+        resp = await client.get("/api/v1/broadcast/stats")
+        assert resp.status_code == 401
+
+    # ─── Template CRUD ───
+
+    async def test_list_templates(self, client: AsyncClient, admin_token: str, seed_templates):
+        resp = await client.get(
             "/api/v1/broadcast/templates",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {admin_token}"},
         )
-        # We expect 403 since user isn't admin — we need to test the preview differently
-        # For now, let's just verify the categories endpoint works
-        assert True
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) >= 2
+        names = [t["name"] for t in data]
+        assert "test_announcement" in names
+        assert "test_reminder" in names
 
-    async def test_preview_renders_correctly(self, client: AsyncClient):
-        """Test template preview via API - admin only."""
-        # Register
-        email = f"preview-{uuid.uuid4().hex[:8]}@test.com"
-        reg_resp = await client.post(
-            "/api/v1/auth/register",
+    async def test_list_templates_filtered_by_category(
+        self, client: AsyncClient, admin_token: str, seed_templates
+    ):
+        resp = await client.get(
+            "/api/v1/broadcast/templates?category=reminder",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert all(t["category"] == "reminder" for t in data)
+
+    async def test_get_template(self, client: AsyncClient, admin_token: str, seed_templates):
+        tmpl_id = seed_templates[0].id
+        resp = await client.get(
+            f"/api/v1/broadcast/templates/{tmpl_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["name"] == "test_announcement"
+
+    async def test_get_template_not_found(self, client: AsyncClient, admin_token: str):
+        resp = await client.get(
+            f"/api/v1/broadcast/templates/{uuid.uuid4()}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 404
+
+    async def test_create_template(self, client: AsyncClient, admin_token: str):
+        resp = await client.post(
+            "/api/v1/broadcast/templates",
+            headers={"Authorization": f"Bearer {admin_token}"},
             json={
-                "first_name": "Preview",
-                "last_name": "User",
-                "email": email,
-                "password": "StrongP@ss1",
+                "name": "new_test_template",
+                "description": "Created during test",
+                "category": "announcement",
+                "body_template": "Hello {name}!",
+                "variables": ["name"],
             },
         )
-        token = reg_resp.json()["access_token"]
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["name"] == "new_test_template"
+        assert data["category"] == "announcement"
 
-        # We can't make this user admin via API, so we expect 403
-        # The actual preview logic is tested in test_template_engine.py
+    async def test_create_template_duplicate_name(
+        self, client: AsyncClient, admin_token: str, seed_templates
+    ):
+        resp = await client.post(
+            "/api/v1/broadcast/templates",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "name": "test_announcement",
+                "category": "announcement",
+                "body_template": "Test body",
+            },
+        )
+        assert resp.status_code == 409
+
+    async def test_update_template(self, client: AsyncClient, admin_token: str, seed_templates):
+        tmpl_id = seed_templates[1].id
+        resp = await client.put(
+            f"/api/v1/broadcast/templates/{tmpl_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "name": "updated_reminder",
+                "description": "Updated",
+                "category": "announcement",
+                "body_template": "Updated: {tournament} at {time}",
+                "variables": ["tournament", "time"],
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.json()["name"] == "updated_reminder"
+
+    async def test_update_template_not_found(self, client: AsyncClient, admin_token: str):
+        resp = await client.put(
+            f"/api/v1/broadcast/templates/{uuid.uuid4()}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={"name": "nope"},
+        )
+        assert resp.status_code == 404
+
+    async def test_delete_custom_template(self, client: AsyncClient, admin_token: str, seed_templates):
+        # seed_templates[1] is is_builtin=False
+        tmpl_id = seed_templates[1].id
+        resp = await client.delete(
+            f"/api/v1/broadcast/templates/{tmpl_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 204
+
+    async def test_delete_builtin_template_denied(self, client: AsyncClient, admin_token: str, seed_templates):
+        # seed_templates[0] is is_builtin=True
+        tmpl_id = seed_templates[0].id
+        resp = await client.delete(
+            f"/api/v1/broadcast/templates/{tmpl_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 403
+
+    # ─── Preview & Send ───
+
+    async def test_preview_template(self, client: AsyncClient, admin_token: str, seed_templates):
+        tmpl_id = seed_templates[0].id
         resp = await client.post(
             "/api/v1/broadcast/preview",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "template_id": str(tmpl_id),
+                "variables": {"time": "7PM", "date": "Friday", "player_count": 24, "player_list": ["Alice", "Bob"]},
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()["rendered_body"]
+        assert "7PM" in body
+        assert "Friday" in body
+        assert "24" in body
+        assert "Alice" in body
+        assert "Bob" in body
+
+    async def test_preview_template_not_found(self, client: AsyncClient, admin_token: str):
+        resp = await client.post(
+            "/api/v1/broadcast/preview",
+            headers={"Authorization": f"Bearer {admin_token}"},
             json={
                 "template_id": str(uuid.uuid4()),
                 "variables": {"time": "7PM"},
             },
         )
-        assert resp.status_code == 403
+        assert resp.status_code == 404
+
+    async def test_send_broadcast(self, client: AsyncClient, admin_token: str, seed_templates):
+        tmpl_id = seed_templates[0].id
+        resp = await client.post(
+            "/api/v1/broadcast/send",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "template_id": str(tmpl_id),
+                "subject": "Test Send",
+                "variables": {"time": "7PM", "date": "Friday", "player_count": 24, "player_list": ["Alice"]},
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["subject"] == "Test Send"
+        assert data["status"] in ("pending", "sent", "partial", "failed")
+        assert "id" in data
+
+    async def test_send_manual_broadcast(self, client: AsyncClient, admin_token: str):
+        resp = await client.post(
+            "/api/v1/broadcast/send-manual",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "subject": "Manual Test",
+                "body": "This is a manual message body",
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["status"] in ("pending", "sent", "partial", "failed")
+
+    # ─── History & Stats ───
+
+    async def test_broadcast_history(self, client: AsyncClient, admin_token: str, seed_templates):
+        # Send first to populate history
+        tmpl_id = seed_templates[0].id
+        await client.post(
+            "/api/v1/broadcast/send",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "template_id": str(tmpl_id),
+                "subject": "History Test",
+                "variables": {"time": "8PM", "date": "Saturday", "player_count": 10, "player_list": ["Bob"]},
+            },
+        )
+
+        resp = await client.get(
+            "/api/v1/broadcast/history",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) >= 1
+
+    async def test_broadcast_detail(self, client: AsyncClient, admin_token: str, seed_templates):
+        tmpl_id = seed_templates[0].id
+        send_resp = await client.post(
+            "/api/v1/broadcast/send",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "template_id": str(tmpl_id),
+                "subject": "Detail Test",
+                "variables": {"time": "9PM", "date": "Sunday", "player_count": 5, "player_list": ["Charlie"]},
+            },
+        )
+        broadcast_id = send_resp.json()["id"]
+
+        resp = await client.get(
+            f"/api/v1/broadcast/history/{broadcast_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == broadcast_id
+        assert "recipients" in data
+        assert data["subject"] == "Detail Test"
+
+    async def test_broadcast_stats(self, client: AsyncClient, admin_token: str, seed_templates):
+        tmpl_id = seed_templates[0].id
+        await client.post(
+            "/api/v1/broadcast/send",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "template_id": str(tmpl_id),
+                "subject": "Stats Test",
+                "variables": {"time": "10PM", "date": "Monday", "player_count": 8, "player_list": ["Dave"]},
+            },
+        )
+
+        resp = await client.get(
+            "/api/v1/broadcast/stats",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] >= 1
+        assert "by_status" in data
+
+    # ─── Scheduled Send ───
+
+    async def test_send_scheduled_broadcast(self, client: AsyncClient, admin_token: str, seed_templates):
+        tmpl_id = seed_templates[0].id
+        from datetime import datetime, timedelta, timezone
+
+        future = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+        resp = await client.post(
+            "/api/v1/broadcast/send",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "template_id": str(tmpl_id),
+                "subject": "Scheduled Test",
+                "variables": {"time": "11PM", "date": "Tuesday", "player_count": 3, "player_list": ["Eve"]},
+                "scheduled_for": future,
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["status"] == "scheduled"

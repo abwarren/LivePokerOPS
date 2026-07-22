@@ -1,6 +1,6 @@
 # LivePokerOPS — Architecture Document
 
-> **Last update:** 2026-07-22 — Initial architecture
+> **Last update:** 2026-07-22 — Integrated ConceptPokerMTTpro (11 vertical slices)
 
 ---
 
